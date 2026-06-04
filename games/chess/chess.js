@@ -3366,6 +3366,8 @@ class Chess {
     }
 }
 
+// Safe exports (works in both CommonJS and browser)
+if (typeof exports !== 'undefined') {
 exports.BISHOP = BISHOP;
 exports.BLACK = BLACK;
 exports.Chess = Chess;
@@ -3381,4 +3383,10 @@ exports.SQUARES = SQUARES;
 exports.WHITE = WHITE;
 exports.validateFen = validateFen;
 exports.xoroshiro128 = xoroshiro128;
-//# sourceMappingURL=chess.js.map
+}
+
+// Browser global
+if (typeof window !== 'undefined') {
+  window.Chess = Chess;
+  window.SQUARES = SQUARES;
+}

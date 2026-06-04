@@ -310,7 +310,7 @@
     const PIECES = { 'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
                      'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟' };
 
-    const DIFFICULTY = { easy: 2, medium: 3, hard: 4 };
+    const DIFFICULTY = { easy: 2, medium: 3, hard: 3 };
 
     let game = new Chess();
     let currentLevel = 'easy';
@@ -613,27 +613,23 @@
       let score = 0;
       const fen = game.fen().split(' ')[0];
       const rows = fen.split('/');
-      let col, r;
 
-      // Material + position
-      for (r = 0; r < 8; r++) {
-        col = 0;
+      for (let r = 0; r < 8; r++) {
+        let col = 0;
         for (const ch of rows[r]) {
           if (ch >= '1' && ch <= '8') { col += parseInt(ch); continue; }
           const color = ch === ch.toUpperCase() ? 'w' : 'b';
           const type = ch.toLowerCase();
           const sqName = sq(r, col);
-          const val = PIECE_VALUES[type] + (PST[type] ? PST[type][pstIndex(sqName, color)] : 0);
+          const table = PST[type];
+          const pstVal = table ? (table[pstIndex(sqName, color)] || 0) : 0;
+          const val = (PIECE_VALUES[type] || 0) + pstVal;
           score += (color === 'w' ? val : -val);
           col++;
         }
       }
 
-      // Mobility bonus (simplified)
-      const moves = game.moves({ verbose: false });
-      score += moves.length * 2; // Mobility is good
-
-      return score;
+      return isNaN(score) ? 0 : score;
     }
 
     function minimax(depth, alpha, beta, isMaximizing) {
@@ -641,40 +637,46 @@
 
       const moves = game.moves();
       if (moves.length === 0) {
-        if (game.inCheck()) return { score: isMaximizing ? -99999 + (4-depth)*100 : 99999 - (4-depth)*100, move: null };
+        if (game.inCheck()) return { score: isMaximizing ? -99999 + (3-depth)*100 : 99999 - (3-depth)*100, move: null };
         return { score: 0, move: null };
       }
 
-      // Move ordering: captures first, then checks
-      moves.sort((a, b) => {
-        const aCapt = a.includes('x') ? 1 : 0;
-        const bCapt = b.includes('x') ? 1 : 0;
-        // Check for queen promotion or captures
-        const aScore = a.includes('=') ? 800 : aCapt ? 200 : 0;
-        const bScore = b.includes('=') ? 800 : bCapt ? 200 : 0;
-        return bScore - aScore;
-      });
-
       let bestMove = moves[0];
+      let nodeCount = 0;
 
       for (const m of moves) {
-        game.move(m);
-        const result = minimax(depth - 1, alpha, beta, !isMaximizing);
+        let success = false;
+        try {
+          const result = game.move(m);
+          success = !!result;
+        } catch(e) {
+          success = false;
+        }
+        if (!success) continue; // skip invalid moves
+        nodeCount++;
+
+        const val = minimax(depth - 1, alpha, beta, !isMaximizing);
         game.undo();
 
+        // Handle NaN scores
+        const s = isNaN(val.score) ? 0 : val.score;
+
         if (isMaximizing) {
-          if (result.score > alpha) {
-            alpha = result.score;
+          if (s > alpha) {
+            alpha = s;
             bestMove = m;
           }
         } else {
-          if (result.score < beta) {
-            beta = result.score;
+          if (s < beta) {
+            beta = s;
             bestMove = m;
           }
         }
 
         if (alpha >= beta) break;
+
+        // Safety: limit nodes searched to prevent freeze
+        if (nodeCount > 20000) break;
       }
 
       return { score: isMaximizing ? alpha : beta, move: bestMove };
@@ -682,26 +684,41 @@
 
     function aiMove() {
       if (gameOver) return;
-      if (game.turn() !== 'b') return;
+      if (game.turn() !== 'b') { console.log('aiMove: not black turn'); return; }
 
       isAIThinking = true;
       thinkingIndicator.style.display = 'flex';
       turnText.textContent = '电脑思考中...';
 
       setTimeout(() => {
-        const depth = DIFFICULTY[currentLevel];
-        const result = minimax(depth, -Infinity, Infinity, false);
-        
-        if (result.move) {
-          game.move(result.move);
-          moveHistory.push({ from: result.move.slice(0,2), to: result.move.slice(2,4) });
-        }
+        try {
+          const depth = DIFFICULTY[currentLevel];
+          console.log('AI starting search depth=' + depth);
+          const startTime = performance.now();
+          const result = minimax(depth, -Infinity, Infinity, false);
+          const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+          console.log('AI search done in ' + elapsed + 's, best move:', result.move);
+          
+          if (result.move) {
+            const moveObj = game.move(result.move);
+            console.log('AI move result:', moveObj ? 'ok' : 'FAILED');
+            if (moveObj) {
+              moveHistory.push({ from: moveObj.from, to: moveObj.to });
+            }
+          }
 
-        isAIThinking = false;
-        thinkingIndicator.style.display = 'none';
-        renderBoard();
-        checkGameState();
-      }, 100); // Small delay so UI updates
+          isAIThinking = false;
+          thinkingIndicator.style.display = 'none';
+          renderBoard();
+          checkGameState();
+        } catch (e) {
+          console.error('AI error:', e.message, e.stack);
+          isAIThinking = false;
+          thinkingIndicator.style.display = 'none';
+          gameStatus.textContent = '⚠️ AI 出错，请重新开始';
+          gameStatus.className = 'game-status draw';
+        }
+      }, 50);
     }
 
     function checkGameState() {
@@ -716,7 +733,7 @@
         return;
       }
 
-      if (game.inDraw() || game.insufficientMaterial() || game.inStalemate() || game.inThreefoldRepetition()) {
+      if (game.isDraw()) {
         gameOver = true;
         gameStatus.textContent = '🤝 平局';
         gameStatus.className = 'game-status draw';
@@ -724,7 +741,7 @@
         return;
       }
 
-      if (game.inCheck()) {
+      if (game.isCheck()) {
         gameStatus.textContent = '⚠️ 将军！';
       } else {
         gameStatus.textContent = '';
