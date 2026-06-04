@@ -307,26 +307,6 @@
   </footer>
 
   <script>
-    // DIAGNOSTIC: Check if chess loaded
-    var diag = document.createElement('div');
-    diag.id = 'diag';
-    diag.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff0;color:#000;padding:8px;z-index:9999;font-size:14px;text-align:center';
-    document.body.appendChild(diag);
-    
-    function diagMsg(msg) {
-      var d = document.getElementById('diag');
-      if (d) d.textContent = msg;
-    }
-    
-    diagMsg('Chess loaded: ' + (typeof Chess !== 'undefined'));
-    
-    try {
-      var testGame = new Chess();
-      diagMsg('Chess OK, new Chess() works');
-    } catch(e) {
-      diagMsg('ERROR: ' + e.message);
-    }
-  </script>
   <script>
     const PIECES = { 'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
                      'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟' };
@@ -339,7 +319,7 @@
     let gameOver = false;
     let isAIThinking = false;
     let moveHistory = []; // for undo
-    
+
     // Color squares: light/dark pattern - standard chess board
     // a8 is dark (index 0), h8 is light (index 7)
     const DARK_SQUARES = new Set();
@@ -396,7 +376,7 @@
       const fen = game.fen();
       const captured = { w: [], b: [] };
       const fullSet = { w: { P:0,N:0,B:0,R:0,Q:0 }, b: { P:0,N:0,B:0,R:0,Q:0 } };
-      
+
       // Count pieces from FEN
       const rows = fen.split(' ')[0].split('/');
       rows.forEach(row => {
@@ -412,7 +392,7 @@
 
       // Starting set
       const startSet = { w: { P:8,N:2,B:2,R:2,Q:1,K:1 }, b: { P:8,N:2,B:2,R:2,Q:1,K:1 } };
-      
+
       const order = ['Q','R','B','N','P'];
       let whiteCaptured = '', blackCaptured = '';
       order.forEach(type => {
@@ -421,7 +401,7 @@
         for (let i = fullSet.b[type]; i < startSet.b[type]; i++)
           blackCaptured += PIECES['b' + type];
       });
-      
+
       capturedDisplay.innerHTML = blackCaptured ? `<span style="color:#666">${blackCaptured}</span> ` : '';
       capturedDisplay.innerHTML += whiteCaptured ? `<span>${whiteCaptured}</span>` : '';
     }
@@ -511,9 +491,9 @@
     }
 
     function handleClick(sqName) {
-      diagMsg('click: ' + sqName + ' turn=' + game.turn() + ' AI=' + isAIThinking + ' over=' + gameOver);
       if (gameOver || isAIThinking) return;
-      if (game.turn() === 'b') { diagMsg('not your turn'); return; }
+      if (game.turn() === 'b') {
+return; }
 
       // If a piece is already selected
       if (selectedSquare) {
@@ -532,26 +512,18 @@
         });
 
         if (move) {
-          diagMsg('move OK, turn=' + game.turn() + ', calling aiMove...');
           try {
             clearHighlights();
             selectedSquare = null;
             moveHistory.push(move);
-            diagMsg('about to renderBoard...');
-            renderBoard();
-            diagMsg('renderBoard done, calling checkGameState...');
-            checkGameState();
-            diagMsg('gameOver=' + gameOver + ', about to call aiMove()');
+renderBoard();
+checkGameState();
             if (!gameOver) {
-              diagMsg('calling aiMove now...');
-              aiMove();
-              diagMsg('aiMove returned');
-            } else {
-              diagMsg('gameOver is true, skipping aiMove');
-            }
+aiMove();
+} else {
+}
           } catch(e) {
-            diagMsg('ERROR in move handler: ' + e.message + ' | ' + e.stack);
-            console.error('ERROR:', e);
+console.error('ERROR:', e);
           }
           return;
         }
@@ -720,43 +692,34 @@
     }
 
     function aiMove() {
-      diagMsg('ENTERED aiMove(), turn=' + game.turn() + ' gameOver=' + gameOver);
-      if (gameOver) { diagMsg('aiMove: gameOver=true, exiting'); return; }
-      if (game.turn() !== 'b') { diagMsg('aiMove: turn=' + game.turn() + ' not black, exiting'); return; }
-      diagMsg('aiMove: proceeding...');
-      isAIThinking = true;
+      if (gameOver) {
+return; }
+isAIThinking = true;
       thinkingIndicator.style.display = 'flex';
       turnText.textContent = '电脑思考中...';
-      diagMsg('AI thinking started...');
-
-      setTimeout(() => {
+setTimeout(() => {
         try {
           const depth = DIFFICULTY[currentLevel];
-          diagMsg('AI searching depth=' + depth);
-          const startTime = performance.now();
+const startTime = performance.now();
           const result = minimax(depth, -Infinity, Infinity, false);
           const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
-          diagMsg('AI done in ' + elapsed + 's, move=' + (result.move || 'none'));
           console.log('AI search done in ' + elapsed + 's, best move:', result.move);
-          
+
           if (result.move) {
             const moveObj = game.move(result.move);
-            diagMsg('AI execute move: ' + (moveObj ? moveObj.san : 'FAILED'));
             console.log('AI move result:', moveObj ? 'ok' : 'FAILED');
             if (moveObj) {
               moveHistory.push({ from: moveObj.from, to: moveObj.to });
             }
           } else {
-            diagMsg('AI found no move!');
-          }
+}
 
           isAIThinking = false;
           thinkingIndicator.style.display = 'none';
           renderBoard();
           checkGameState();
         } catch (e) {
-          diagMsg('AI ERROR: ' + e.message);
-          console.error('AI error:', e.message, e.stack);
+console.error('AI error:', e.message, e.stack);
           isAIThinking = false;
           thinkingIndicator.style.display = 'none';
           gameStatus.textContent = '⚠️ AI 出错，请重新开始';
