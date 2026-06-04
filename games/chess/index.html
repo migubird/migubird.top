@@ -532,13 +532,20 @@
         });
 
         if (move) {
-          diagMsg('move OK, turn=' + game.turn());
+          diagMsg('move OK, turn=' + game.turn() + ', calling aiMove...');
           clearHighlights();
           selectedSquare = null;
           moveHistory.push(move);
           renderBoard();
           checkGameState();
-          if (!gameOver) aiMove();
+          diagMsg('gameOver=' + gameOver + ', about to call aiMove()');
+          if (!gameOver) {
+            diagMsg('calling aiMove now...');
+            aiMove();
+            diagMsg('aiMove returned');
+          } else {
+            diagMsg('gameOver is true, skipping aiMove');
+          }
           return;
         }
 
@@ -706,8 +713,10 @@
     }
 
     function aiMove() {
-      if (gameOver) return;
-      if (game.turn() !== 'b') { console.log('aiMove: not black turn'); return; }
+      diagMsg('ENTERED aiMove(), turn=' + game.turn() + ' gameOver=' + gameOver);
+      if (gameOver) { diagMsg('aiMove: gameOver=true, exiting'); return; }
+      if (game.turn() !== 'b') { diagMsg('aiMove: turn=' + game.turn() + ' not black, exiting'); return; }
+      diagMsg('aiMove: proceeding...');
       isAIThinking = true;
       thinkingIndicator.style.display = 'flex';
       turnText.textContent = '电脑思考中...';
