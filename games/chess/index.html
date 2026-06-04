@@ -533,18 +533,25 @@
 
         if (move) {
           diagMsg('move OK, turn=' + game.turn() + ', calling aiMove...');
-          clearHighlights();
-          selectedSquare = null;
-          moveHistory.push(move);
-          renderBoard();
-          checkGameState();
-          diagMsg('gameOver=' + gameOver + ', about to call aiMove()');
-          if (!gameOver) {
-            diagMsg('calling aiMove now...');
-            aiMove();
-            diagMsg('aiMove returned');
-          } else {
-            diagMsg('gameOver is true, skipping aiMove');
+          try {
+            clearHighlights();
+            selectedSquare = null;
+            moveHistory.push(move);
+            diagMsg('about to renderBoard...');
+            renderBoard();
+            diagMsg('renderBoard done, calling checkGameState...');
+            checkGameState();
+            diagMsg('gameOver=' + gameOver + ', about to call aiMove()');
+            if (!gameOver) {
+              diagMsg('calling aiMove now...');
+              aiMove();
+              diagMsg('aiMove returned');
+            } else {
+              diagMsg('gameOver is true, skipping aiMove');
+            }
+          } catch(e) {
+            diagMsg('ERROR in move handler: ' + e.message + ' | ' + e.stack);
+            console.error('ERROR:', e);
           }
           return;
         }
