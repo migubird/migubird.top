@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>国际象棋 - 咪咕鸟游戏</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="chess.js"></script>
+  <style>
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .game-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+
+    .game-subtitle {
+      color: #999;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    /* Difficulty selector */
+    .difficulty {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .difficulty button {
+      padding: 6px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      color: #666;
+    }
+
+    .difficulty button:hover { border-color: #2c3e50; color: #2c3e50; }
+
+    .difficulty button.active-easy {
+      border-color: #27ae60;
+      background: #f0faf3;
+      color: #27ae60;
+      font-weight: 600;
+    }
+    .difficulty button.active-medium {
+      border-color: #e67e22;
+      background: #fef9f0;
+      color: #e67e22;
+      font-weight: 600;
+    }
+    .difficulty button.active-hard {
+      border-color: #c0392b;
+      background: #fdf6f0;
+      color: #c0392b;
+      font-weight: 600;
+    }
+
+    /* Game info bar */
+    .game-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 16px;
+      padding: 10px 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .turn-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .turn-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 2px solid #ddd;
+    }
+
+    .turn-dot.white { background: #fff; }
+    .turn-dot.black { background: #222; }
+
+    .captured-pieces {
+      font-size: 18px;
+      min-height: 24px;
+      letter-spacing: 1px;
+    }
+
+    /* Board */
+    .board-wrapper {
+      background: white;
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 0;
+      width: 480px;
+      height: 480px;
+      border: 2px solid #2c3e50;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .square {
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      transition: background 0.15s;
+    }
+
+    .square.light { background: #f0d9b5; }
+    .square.dark { background: #b58863; }
+
+    .square.selected {
+      background: #f6f669 !important;
+    }
+
+    .square.valid-move::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.2);
+    }
+
+    .square.valid-capture {
+      box-shadow: inset 0 0 0 4px rgba(0,0,0,0.3);
+    }
+
+    .square.last-move {
+      background: #cdd26a !important;
+    }
+
+    .square.in-check {
+      background: radial-gradient(ellipse at center, #ff0000 0%, #e70000 25%, rgba(169,0,0,0) 89%) !important;
+    }
+
+    /* Status */
+    .game-status {
+      margin-top: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      min-height: 24px;
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    .game-status.win { color: #27ae60; }
+    .game-status.lose { color: #c0392b; }
+    .game-status.draw { color: #e67e22; }
+
+    /* Buttons */
+    .game-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      padding: 8px 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      border-color: #2c3e50;
+      color: #2c3e50;
+    }
+
+    .btn-primary {
+      background: #2c3e50;
+      color: white;
+      border-color: #2c3e50;
+    }
+
+    .btn-primary:hover {
+      background: #c0392b;
+      border-color: #c0392b;
+    }
+
+    /* Thinking indicator */
+    .thinking {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .thinking .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ddd;
+      border-top-color: #2c3e50;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 20px;
+      color: #999;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: #2c3e50; }
+
+    /* Responsive */
+    @media (max-width: 540px) {
+      .board { width: 92vw; height: 92vw; }
+      .square { width: 11.5vw; height: 11.5vw; font-size: 7vw; }
+      .board-wrapper { padding: 8px; }
+      .game-title { font-size: 22px; }
+      .game-info { max-width: 92vw; padding: 8px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav-brand">咪咕鸟游戏</a>
+  </nav>
+
+  <main>
+    <div class="game-container">
+      <h1 class="game-title">♚ 国际象棋</h1>
+      <p class="game-subtitle">人机对战 · 点击棋子再点击目标格移动</p>
+
+      <div class="difficulty">
+        <button class="active-easy" data-level="easy">初级</button>
+        <button data-level="medium">中级</button>
+        <button data-level="hard">高级</button>
+      </div>
+
+      <div class="game-info">
+        <div class="turn-indicator">
+          <span class="turn-dot white" id="turnDot"></span>
+          <span id="turnText">你的回合</span>
+        </div>
+        <div class="captured-pieces" id="capturedDisplay"></div>
+      </div>
+
+      <div class="board-wrapper">
+        <div class="board" id="board"></div>
+      </div>
+
+      <div class="game-status" id="gameStatus"></div>
+      <div class="thinking" id="thinkingIndicator">
+        <div class="spinner"></div>
+        <span>电脑思考中...</span>
+      </div>
+
+      <div class="game-actions">
+        <button class="btn btn-primary" id="restartBtn">↻ 新一局</button>
+        <button class="btn" id="undoBtn">↩ 悔棋</button>
+      </div>
+
+      <a href="/" class="back-link">← 返回游戏列表</a>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 咪咕鸟游戏 · 原创网页游戏</p>
+  </footer>
+
+  <script>
+    const PIECES = { 'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
+                     'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟' };
+
+    const DIFFICULTY = { easy: 2, medium: 3, hard: 4 };
+
+    let game = new Chess();
+    let currentLevel = 'easy';
+    let selectedSquare = null;
+    let gameOver = false;
+    let isAIThinking = false;
+    let moveHistory = []; // for undo
+    
+    // Color squares: light/dark pattern - standard chess board
+    // a8 is dark (index 0), h8 is light (index 7)
+    const DARK_SQUARES = new Set();
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if ((r + c) % 2 === 1) DARK_SQUARES.add(sq(r, c));
+      }
+    }
+
+    function sq(r, c) { return 'abcdefgh'[c] + (8 - r); }
+
+    const boardEl = document.getElementById('board');
+    const gameStatus = document.getElementById('gameStatus');
+    const turnText = document.getElementById('turnText');
+    const turnDot = document.getElementById('turnDot');
+    const capturedDisplay = document.getElementById('capturedDisplay');
+    const thinkingIndicator = document.getElementById('thinkingIndicator');
+    const diffBtns = document.querySelectorAll('.difficulty button');
+
+    diffBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        diffBtns.forEach(b => { b.className = ''; });
+        currentLevel = btn.dataset.level;
+        btn.className = `active-${currentLevel}`;
+        initGame();
+      });
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', initGame);
+    document.getElementById('undoBtn').addEventListener('click', undoMove);
+
+    function initGame() {
+      game = new Chess();
+      selectedSquare = null;
+      gameOver = false;
+      isAIThinking = false;
+      moveHistory = [];
+      gameStatus.textContent = '';
+      gameStatus.className = 'game-status';
+      thinkingIndicator.style.display = 'none';
+      renderBoard();
+      updateInfo();
+    }
+
+    function updateInfo() {
+      if (gameOver) return;
+      const turn = game.turn();
+      turnDot.className = `turn-dot ${turn === 'w' ? 'white' : 'black'}`;
+      turnText.textContent = turn === 'w' ? '你的回合（白棋）' : '电脑思考中...';
+      updateCaptured();
+    }
+
+    function updateCaptured() {
+      const fen = game.fen();
+      const captured = { w: [], b: [] };
+      const fullSet = { w: { P:0,N:0,B:0,R:0,Q:0 }, b: { P:0,N:0,B:0,R:0,Q:0 } };
+      
+      // Count pieces from FEN
+      const rows = fen.split(' ')[0].split('/');
+      rows.forEach(row => {
+        let c = 0;
+        for (const ch of row) {
+          if (ch >= '1' && ch <= '8') { c += parseInt(ch); continue; }
+          const color = ch === ch.toUpperCase() ? 'w' : 'b';
+          const type = ch.toUpperCase();
+          fullSet[color][type]++;
+          c++;
+        }
+      });
+
+      // Starting set
+      const startSet = { w: { P:8,N:2,B:2,R:2,Q:1,K:1 }, b: { P:8,N:2,B:2,R:2,Q:1,K:1 } };
+      
+      const order = ['Q','R','B','N','P'];
+      let whiteCaptured = '', blackCaptured = '';
+      order.forEach(type => {
+        for (let i = fullSet.w[type]; i < startSet.w[type]; i++)
+          whiteCaptured += PIECES['w' + type];
+        for (let i = fullSet.b[type]; i < startSet.b[type]; i++)
+          blackCaptured += PIECES['b' + type];
+      });
+      
+      capturedDisplay.innerHTML = blackCaptured ? `<span style="color:#666">${blackCaptured}</span> ` : '';
+      capturedDisplay.innerHTML += whiteCaptured ? `<span>${whiteCaptured}</span>` : '';
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      const fen = game.fen().split(' ')[0];
+      const rows = fen.split('/');
+      const inCheck = game.inCheck();
+
+      for (let r = 0; r < 8; r++) {
+        let col = 0;
+        for (const ch of rows[r]) {
+          if (ch >= '1' && ch <= '8') {
+            const empty = parseInt(ch);
+            for (let e = 0; e < empty; e++) {
+              const sqName = sq(r, col);
+              const div = createSquare(r, col, sqName, null, inCheck);
+              boardEl.appendChild(div);
+              col++;
+            }
+          } else {
+            const color = ch === ch.toUpperCase() ? 'w' : 'b';
+            const type = ch.toUpperCase();
+            const sqName = sq(r, col);
+            const div = createSquare(r, col, sqName, color + type, inCheck);
+            boardEl.appendChild(div);
+            col++;
+          }
+        }
+      }
+
+      // Highlight last move
+      if (moveHistory.length > 0) {
+        const last = moveHistory[moveHistory.length - 1];
+        highlightSquare(last.from);
+        highlightSquare(last.to);
+      }
+    }
+
+    function createSquare(r, c, sqName, piece, inCheck) {
+      const div = document.createElement('div');
+      const isDark = DARK_SQUARES.has(sqName);
+      div.className = `square ${isDark ? 'dark' : 'light'}`;
+      div.dataset.sq = sqName;
+
+      if (piece) {
+        div.textContent = PIECES[piece] || '';
+        div.dataset.piece = piece;
+      }
+
+      if (inCheck && piece === (game.turn() === 'w' ? 'wK' : 'bK')) {
+        div.classList.add('in-check');
+      }
+
+      div.addEventListener('click', () => handleClick(sqName));
+      return div;
+    }
+
+    function highlightSquare(sqName) {
+      const idx = (8 - parseInt(sqName[1])) * 8 + 'abcdefgh'.indexOf(sqName[0]);
+      if (boardEl.children[idx]) {
+        boardEl.children[idx].classList.add('last-move');
+      }
+    }
+
+    function getSquareEl(sqName) {
+      const idx = (8 - parseInt(sqName[1])) * 8 + 'abcdefgh'.indexOf(sqName[0]);
+      return boardEl.children[idx];
+    }
+
+    function clearHighlights() {
+      boardEl.querySelectorAll('.selected, .valid-move, .valid-capture, .last-move, .in-check').forEach(el => {
+        el.classList.remove('selected', 'valid-move', 'valid-capture', 'last-move', 'in-check');
+      });
+    }
+
+    function showValidMoves(sqName) {
+      const moves = game.moves({ square: sqName, verbose: true });
+      moves.forEach(move => {
+        const el = getSquareEl(move.to);
+        if (el) {
+          if (move.captured) el.classList.add('valid-capture');
+          else el.classList.add('valid-move');
+        }
+      });
+    }
+
+    function handleClick(sqName) {
+      if (gameOver || isAIThinking) return;
+      if (game.turn() === 'b') return; // AI's turn
+
+      // If a piece is already selected
+      if (selectedSquare) {
+        // Clicking same square - deselect
+        if (selectedSquare === sqName) {
+          clearHighlights();
+          selectedSquare = null;
+          return;
+        }
+
+        // Try to make a move
+        const move = game.move({
+          from: selectedSquare,
+          to: sqName,
+          promotion: 'q' // Always promote to queen
+        });
+
+        if (move) {
+          clearHighlights();
+          selectedSquare = null;
+          moveHistory.push(move);
+          renderBoard();
+          checkGameState();
+          if (!gameOver) aiMove();
+          return;
+        }
+
+        // Not a valid move - try selecting a different piece
+        const piece = game.get(sqName);
+        if (piece && piece.color === 'w') {
+          clearHighlights();
+          selectedSquare = sqName;
+          const el = getSquareEl(sqName);
+          if (el) el.classList.add('selected');
+          showValidMoves(sqName);
+          return;
+        }
+
+        // Invalid target, deselect
+        clearHighlights();
+        selectedSquare = null;
+        return;
+      }
+
+      // No piece selected - try to select one
+      const piece = game.get(sqName);
+      if (piece && piece.color === 'w') {
+        clearHighlights();
+        selectedSquare = sqName;
+        const el = getSquareEl(sqName);
+        if (el) el.classList.add('selected');
+        showValidMoves(sqName);
+      }
+    }
+
+    // ========== AI Engine ==========
+
+    const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+    // Piece-square tables for positional evaluation
+    const PST = {
+      p: [ 0,  0,  0,  0,  0,  0,  0,  0,
+          50, 50, 50, 50, 50, 50, 50, 50,
+          10, 10, 20, 30, 30, 20, 10, 10,
+           5,  5, 10, 25, 25, 10,  5,  5,
+           0,  0,  0, 20, 20,  0,  0,  0,
+           5, -5,-10,  0,  0,-10, -5,  5,
+           5, 10, 10,-20,-20, 10, 10,  5,
+           0,  0,  0,  0,  0,  0,  0,  0 ],
+      n: [-50,-40,-30,-30,-30,-30,-40,-50,
+          -40,-20,  0,  0,  0,  0,-20,-40,
+          -30,  0, 10, 15, 15, 10,  0,-30,
+          -30,  5, 15, 20, 20, 15,  5,-30,
+          -30,  0, 15, 20, 20, 15,  0,-30,
+          -30,  5, 10, 15, 15, 10,  5,-30,
+          -40,-20,  0,  5,  5,  0,-20,-40,
+          -50,-40,-30,-30,-30,-30,-40,-50 ],
+      b: [-20,-10,-10,-10,-10,-10,-10,-20,
+          -10,  0,  0,  0,  0,  0,  0,-10,
+          -10,  0,  5, 10, 10,  5,  0,-10,
+          -10,  5,  5, 10, 10,  5,  5,-10,
+          -10,  0, 10, 10, 10, 10,  0,-10,
+          -10, 10, 10, 10, 10, 10, 10,-10,
+          -10,  5,  0,  0,  0,  0,  5,-10,
+          -20,-10,-10,-10,-10,-10,-10,-20 ],
+      r: [ 0,  0,  0,  0,  0,  0,  0,  0,
+           5, 10, 10, 10, 10, 10, 10,  5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+           0,  0,  0,  5,  5,  0,  0,  0 ],
+      q: [-20,-10,-10, -5, -5,-10,-10,-20,
+          -10,  0,  0,  0,  0,  0,  0,-10,
+          -10,  0,  5,  5,  5,  5,  0,-10,
+           -5,  0,  5,  5,  5,  5,  0, -5,
+            0,  0,  5,  5,  5,  5,  0, -5,
+          -10,  5,  5,  5,  5,  5,  0,-10,
+          -10,  0,  5,  0,  0,  0,  0,-10,
+          -20,-10,-10, -5, -5,-10,-10,-20 ],
+      k: [-30,-40,-40,-50,-50,-40,-40,-30,
+          -30,-40,-40,-50,-50,-40,-40,-30,
+          -30,-40,-40,-50,-50,-40,-40,-30,
+          -30,-40,-40,-50,-50,-40,-40,-30,
+          -20,-30,-30,-40,-40,-30,-30,-20,
+          -10,-20,-20,-20,-20,-20,-20,-10,
+           20, 20,  0,  0,  0,  0, 20, 20,
+           20, 30, 10,  0,  0, 10, 30, 20 ]
+    };
+
+    function pstIndex(sq, color) {
+      const file = 'abcdefgh'.indexOf(sq[0]);
+      const rank = parseInt(sq[1]) - 1;
+      return color === 'w' ? (7 - rank) * 8 + file : rank * 8 + (7 - file);
+    }
+
+    function evaluate() {
+      let score = 0;
+      const fen = game.fen().split(' ')[0];
+      const rows = fen.split('/');
+      let col, r;
+
+      // Material + position
+      for (r = 0; r < 8; r++) {
+        col = 0;
+        for (const ch of rows[r]) {
+          if (ch >= '1' && ch <= '8') { col += parseInt(ch); continue; }
+          const color = ch === ch.toUpperCase() ? 'w' : 'b';
+          const type = ch.toLowerCase();
+          const sqName = sq(r, col);
+          const val = PIECE_VALUES[type] + (PST[type] ? PST[type][pstIndex(sqName, color)] : 0);
+          score += (color === 'w' ? val : -val);
+          col++;
+        }
+      }
+
+      // Mobility bonus (simplified)
+      const moves = game.moves({ verbose: false });
+      score += moves.length * 2; // Mobility is good
+
+      return score;
+    }
+
+    function minimax(depth, alpha, beta, isMaximizing) {
+      if (depth === 0) return { score: evaluate(), move: null };
+
+      const moves = game.moves();
+      if (moves.length === 0) {
+        if (game.inCheck()) return { score: isMaximizing ? -99999 + (4-depth)*100 : 99999 - (4-depth)*100, move: null };
+        return { score: 0, move: null };
+      }
+
+      // Move ordering: captures first, then checks
+      moves.sort((a, b) => {
+        const aCapt = a.includes('x') ? 1 : 0;
+        const bCapt = b.includes('x') ? 1 : 0;
+        // Check for queen promotion or captures
+        const aScore = a.includes('=') ? 800 : aCapt ? 200 : 0;
+        const bScore = b.includes('=') ? 800 : bCapt ? 200 : 0;
+        return bScore - aScore;
+      });
+
+      let bestMove = moves[0];
+
+      for (const m of moves) {
+        game.move(m);
+        const result = minimax(depth - 1, alpha, beta, !isMaximizing);
+        game.undo();
+
+        if (isMaximizing) {
+          if (result.score > alpha) {
+            alpha = result.score;
+            bestMove = m;
+          }
+        } else {
+          if (result.score < beta) {
+            beta = result.score;
+            bestMove = m;
+          }
+        }
+
+        if (alpha >= beta) break;
+      }
+
+      return { score: isMaximizing ? alpha : beta, move: bestMove };
+    }
+
+    function aiMove() {
+      if (gameOver) return;
+      if (game.turn() !== 'b') return;
+
+      isAIThinking = true;
+      thinkingIndicator.style.display = 'flex';
+      turnText.textContent = '电脑思考中...';
+
+      setTimeout(() => {
+        const depth = DIFFICULTY[currentLevel];
+        const result = minimax(depth, -Infinity, Infinity, false);
+        
+        if (result.move) {
+          game.move(result.move);
+          moveHistory.push({ from: result.move.slice(0,2), to: result.move.slice(2,4) });
+        }
+
+        isAIThinking = false;
+        thinkingIndicator.style.display = 'none';
+        renderBoard();
+        checkGameState();
+      }, 100); // Small delay so UI updates
+    }
+
+    function checkGameState() {
+      updateInfo();
+
+      if (game.inCheckmate()) {
+        gameOver = true;
+        const winner = game.turn() === 'w' ? '黑方' : '白方';
+        gameStatus.textContent = `🏆 ${winner}获胜！${winner === '黑方' ? '电脑赢了' : '你赢了！'}`;
+        gameStatus.className = `game-status ${game.turn() === 'w' ? 'lose' : 'win'}`;
+        turnText.textContent = '对局结束';
+        return;
+      }
+
+      if (game.inDraw() || game.insufficientMaterial() || game.inStalemate() || game.inThreefoldRepetition()) {
+        gameOver = true;
+        gameStatus.textContent = '🤝 平局';
+        gameStatus.className = 'game-status draw';
+        turnText.textContent = '对局结束';
+        return;
+      }
+
+      if (game.inCheck()) {
+        gameStatus.textContent = '⚠️ 将军！';
+      } else {
+        gameStatus.textContent = '';
+      }
+    }
+
+    function undoMove() {
+      if (isAIThinking || moveHistory.length === 0) return;
+      // Undo two moves (AI + player)
+      if (moveHistory.length >= 2) {
+        game.undo();
+        game.undo();
+        moveHistory.pop();
+        moveHistory.pop();
+      } else {
+        game.undo();
+        moveHistory.pop();
+      }
+      gameOver = false;
+      selectedSquare = null;
+      renderBoard();
+      updateInfo();
+      gameStatus.textContent = '';
+      gameStatus.className = 'game-status';
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
