@@ -1,504 +1,818 @@
-     1|<!DOCTYPE html>
-     2|<html lang="zh-CN">
-     3|<head>
-     4|  <meta charset="UTF-8">
-     5|  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-     6|  <title>国际象棋 - 咪咕鸟游戏</title>
-     7|  <link rel="stylesheet" href="/css/style.css">
-     8|  <script src="chess.js"></script>
-     9|  <style>
-    10|    .game-container {
-    11|      display: flex;
-    12|      flex-direction: column;
-    13|      align-items: center;
-    14|      padding: 40px 20px;
-    15|    }
-    16|
-    17|    .game-title {
-    18|      font-size: 28px;
-    19|      font-weight: 700;
-    20|      color: #2c3e50;
-    21|      margin-bottom: 8px;
-    22|    }
-    23|
-    24|    .game-subtitle {
-    25|      color: #999;
-    26|      margin-bottom: 24px;
-    27|      font-size: 14px;
-    28|    }
-    29|
-    30|    /* Difficulty selector */
-    31|    .difficulty {
-    32|      display: flex;
-    33|      gap: 8px;
-    34|      margin-bottom: 20px;
-    35|    }
-    36|
-    37|    .difficulty button {
-    38|      padding: 6px 16px;
-    39|      border: 2px solid #e0e0e0;
-    40|      border-radius: 8px;
-    41|      background: white;
-    42|      cursor: pointer;
-    43|      font-size: 13px;
-    44|      transition: all 0.2s;
-    45|      color: #666;
-    46|    }
-    47|
-    48|    .difficulty button:hover { border-color: #2c3e50; color: #2c3e50; }
-    49|
-    50|    .difficulty button.active-easy {
-    51|      border-color: #27ae60;
-    52|      background: #f0faf3;
-    53|      color: #27ae60;
-    54|      font-weight: 600;
-    55|    }
-    56|    .difficulty button.active-medium {
-    57|      border-color: #e67e22;
-    58|      background: #fef9f0;
-    59|      color: #e67e22;
-    60|      font-weight: 600;
-    61|    }
-    62|    .difficulty button.active-hard {
-    63|      border-color: #c0392b;
-    64|      background: #fdf6f0;
-    65|      color: #c0392b;
-    66|      font-weight: 600;
-    67|    }
-    68|
-    69|    /* Game info bar */
-    70|    .game-info {
-    71|      display: flex;
-    72|      align-items: center;
-    73|      justify-content: space-between;
-    74|      width: 100%;
-    75|      max-width: 480px;
-    76|      margin-bottom: 16px;
-    77|      padding: 10px 20px;
-    78|      background: white;
-    79|      border-radius: 12px;
-    80|      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    81|    }
-    82|
-    83|    .turn-indicator {
-    84|      display: flex;
-    85|      align-items: center;
-    86|      gap: 8px;
-    87|      font-size: 15px;
-    88|      font-weight: 600;
-    89|      color: #2c3e50;
-    90|    }
-    91|
-    92|    .turn-dot {
-    93|      width: 14px;
-    94|      height: 14px;
-    95|      border-radius: 50%;
-    96|      display: inline-block;
-    97|      border: 2px solid #ddd;
-    98|    }
-    99|
-   100|    .turn-dot.white { background: #fff; }
-   101|    .turn-dot.black { background: #222; }
-   102|
-   103|    .captured-pieces {
-   104|      font-size: 18px;
-   105|      min-height: 24px;
-   106|      letter-spacing: 1px;
-   107|    }
-   108|
-   109|    /* Board */
-   110|    .board-wrapper {
-   111|      background: white;
-   112|      padding: 12px;
-   113|      border-radius: 12px;
-   114|      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-   115|    }
-   116|
-   117|    .board {
-   118|      display: grid;
-   119|      grid-template-columns: repeat(8, 1fr);
-   120|      gap: 0;
-   121|      width: 480px;
-   122|      height: 480px;
-   123|      border: 2px solid #2c3e50;
-   124|      border-radius: 4px;
-   125|      overflow: hidden;
-   126|    }
-   127|
-   128|    .square {
-   129|      width: 60px;
-   130|      height: 60px;
-   131|      display: flex;
-   132|      align-items: center;
-   133|      justify-content: center;
-   134|      font-size: 44px;
-   135|      cursor: pointer;
-   136|      user-select: none;
-   137|      position: relative;
-   138|      transition: background 0.15s;
-   139|    }
-   140|
-   141|    .square.light { background: #f0d9b5; }
-   142|    .square.dark { background: #b58863; }
-   143|
-   144|    .square.selected {
-   145|      background: #f6f669 !important;
-   146|    }
-   147|
-   148|    .square.valid-move::after {
-   149|      content: '';
-   150|      position: absolute;
-   151|      width: 16px;
-   152|      height: 16px;
-   153|      border-radius: 50%;
-   154|      background: rgba(0,0,0,0.2);
-   155|    }
-   156|
-   157|    .square.valid-capture {
-   158|      box-shadow: inset 0 0 0 4px rgba(0,0,0,0.3);
-   159|    }
-   160|
-   161|    .square.last-move {
-   162|      background: #cdd26a !important;
-   163|    }
-   164|
-   165|    .square.in-check {
-   166|      background: radial-gradient(ellipse at center, #ff0000 0%, #e70000 25%, rgba(169,0,0,0) 89%) !important;
-   167|    }
-   168|
-   169|    /* Status */
-   170|    .game-status {
-   171|      margin-top: 16px;
-   172|      font-size: 16px;
-   173|      font-weight: 600;
-   174|      min-height: 24px;
-   175|      text-align: center;
-   176|      color: #2c3e50;
-   177|    }
-   178|
-   179|    .game-status.win { color: #27ae60; }
-   180|    .game-status.lose { color: #c0392b; }
-   181|    .game-status.draw { color: #e67e22; }
-   182|
-   183|    /* Buttons */
-   184|    .game-actions {
-   185|      display: flex;
-   186|      gap: 10px;
-   187|      margin-top: 12px;
-   188|    }
-   189|
-   190|    .btn {
-   191|      padding: 8px 20px;
-   192|      border: 2px solid #e0e0e0;
-   193|      border-radius: 8px;
-   194|      background: white;
-   195|      cursor: pointer;
-   196|      font-size: 13px;
-   197|      transition: all 0.2s;
-   198|      color: #666;
-   199|      font-weight: 500;
-   200|    }
-   201|
-   202|    .btn:hover {
-   203|      border-color: #2c3e50;
-   204|      color: #2c3e50;
-   205|    }
-   206|
-   207|    .btn-primary {
-   208|      background: #2c3e50;
-   209|      color: white;
-   210|      border-color: #2c3e50;
-   211|    }
-   212|
-   213|    .btn-primary:hover {
-   214|      background: #c0392b;
-   215|      border-color: #c0392b;
-   216|    }
-   217|
-   218|    /* Thinking indicator */
-   219|    .thinking {
-   220|      display: none;
-   221|      align-items: center;
-   222|      gap: 8px;
-   223|      margin-top: 8px;
-   224|      color: #999;
-   225|      font-size: 14px;
-   226|    }
-   227|
-   228|    .thinking .spinner {
-   229|      width: 16px;
-   230|      height: 16px;
-   231|      border: 2px solid #ddd;
-   232|      border-top-color: #2c3e50;
-   233|      border-radius: 50%;
-   234|      animation: spin 0.8s linear infinite;
-   235|    }
-   236|
-   237|    @keyframes spin { to { transform: rotate(360deg); } }
-   238|
-   239|    .back-link {
-   240|      display: inline-flex;
-   241|      align-items: center;
-   242|      gap: 6px;
-   243|      margin-top: 20px;
-   244|      color: #999;
-   245|      text-decoration: none;
-   246|      font-size: 14px;
-   247|      transition: color 0.2s;
-   248|    }
-   249|
-   250|    .back-link:hover { color: #2c3e50; }
-   251|
-   252|    /* Responsive */
-   253|    @media (max-width: 540px) {
-   254|      .board { width: 92vw; height: 92vw; }
-   255|      .square { width: 11.5vw; height: 11.5vw; font-size: 7vw; }
-   256|      .board-wrapper { padding: 8px; }
-   257|      .game-title { font-size: 22px; }
-   258|      .game-info { max-width: 92vw; padding: 8px 12px; }
-   259|    }
-   260|  </style>
-   261|</head>
-   262|<body>
-   263|  <nav class="nav">
-   264|    <a href="/" class="nav-brand">咪咕鸟游戏</a>
-   265|  </nav>
-   266|
-   267|  <main>
-   268|    <div class="game-container">
-   269|      <h1 class="game-title">♚ 国际象棋</h1>
-   270|      <p class="game-subtitle">人机对战 · 点击棋子再点击目标格移动</p>
-   271|
-   272|      <div class="difficulty">
-   273|        <button class="active-easy" data-level="easy">初级</button>
-   274|        <button data-level="medium">中级</button>
-   275|        <button data-level="hard">高级</button>
-   276|      </div>
-   277|
-   278|      <div class="game-info">
-   279|        <div class="turn-indicator">
-   280|          <span class="turn-dot white" id="turnDot"></span>
-   281|          <span id="turnText">你的回合</span>
-   282|        </div>
-   283|        <div class="captured-pieces" id="capturedDisplay"></div>
-   284|      </div>
-   285|
-   286|      <div class="board-wrapper">
-   287|        <div class="board" id="board"></div>
-   288|      </div>
-   289|
-   290|      <div class="game-status" id="gameStatus"></div>
-   291|      <div class="thinking" id="thinkingIndicator">
-   292|        <div class="spinner"></div>
-   293|        <span>电脑思考中...</span>
-   294|      </div>
-   295|
-   296|      <div class="game-actions">
-   297|        <button class="btn btn-primary" id="restartBtn">↻ 新一局</button>
-   298|        <button class="btn" id="undoBtn">↩ 悔棋</button>
-   299|      </div>
-   300|
-   301|      <a href="/" class="back-link">← 返回游戏列表</a>
-   302|    </div>
-   303|  </main>
-   304|
-   305|  <footer class="footer">
-   306|    <p>© 2026 咪咕鸟游戏 · 原创网页游戏</p>
-   307|  </footer>
-   308|
-   309|  <script>
-   310|    // DIAGNOSTIC: Check if chess loaded
-   311|    var diag = document.createElement('div');
-   312|    diag.id = 'diag';
-   313|    diag.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff0;color:#000;padding:8px;z-index:9999;font-size:14px;text-align:center';
-   314|    document.body.appendChild(diag);
-   315|    
-   316|    function
- {
-   317|      var d = document.getElementById('diag');
-   318|      if (d) d.textContent = msg;
-   319|    }
-   320|    
-   321|
-);
-   322|    
-   323|    try {
-   324|      var testGame = new Chess();
-   325|
- works');
-   326|    } catch(e) {
-   327|
-   328|    }
-   329|  </script>
-   330|  <script>
-   331|    const PIECES = { 'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
-   332|                     'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟' };
-   333|
-   334|    const DIFFICULTY = { easy: 2, medium: 3, hard: 3 };
-   335|
-   336|    let game = new Chess();
-   337|    let currentLevel = 'easy';
-   338|    let selectedSquare = null;
-   339|    let gameOver = false;
-   340|    let isAIThinking = false;
-   341|    let moveHistory = []; // for undo
-   342|    
-   343|    // Color squares: light/dark pattern - standard chess board
-   344|    // a8 is dark (index 0), h8 is light (index 7)
-   345|    const DARK_SQUARES = new Set();
-   346|    for (let r = 0; r < 8; r++) {
-   347|      for (let c = 0; c < 8; c++) {
-   348|        if ((r + c) % 2 === 1) DARK_SQUARES.add(sq(r, c));
-   349|      }
-   350|    }
-   351|
-   352|    function sq(r, c) { return 'abcdefgh'[c] + (8 - r); }
-   353|
-   354|    const boardEl = document.getElementById('board');
-   355|    const gameStatus = document.getElementById('gameStatus');
-   356|    const turnText = document.getElementById('turnText');
-   357|    const turnDot = document.getElementById('turnDot');
-   358|    const capturedDisplay = document.getElementById('capturedDisplay');
-   359|    const thinkingIndicator = document.getElementById('thinkingIndicator');
-   360|    const diffBtns = document.querySelectorAll('.difficulty button');
-   361|
-   362|    diffBtns.forEach(btn => {
-   363|      btn.addEventListener('click', () => {
-   364|        diffBtns.forEach(b => { b.className = ''; });
-   365|        currentLevel = btn.dataset.level;
-   366|        btn.className = `active-${currentLevel}`;
-   367|        initGame();
-   368|      });
-   369|    });
-   370|
-   371|    document.getElementById('restartBtn').addEventListener('click', initGame);
-   372|    document.getElementById('undoBtn').addEventListener('click', undoMove);
-   373|
-   374|    function initGame() {
-   375|      game = new Chess();
-   376|      selectedSquare = null;
-   377|      gameOver = false;
-   378|      isAIThinking = false;
-   379|      moveHistory = [];
-   380|      gameStatus.textContent = '';
-   381|      gameStatus.className = 'game-status';
-   382|      thinkingIndicator.style.display = 'none';
-   383|      renderBoard();
-   384|      updateInfo();
-   385|    }
-   386|
-   387|    function updateInfo() {
-   388|      if (gameOver) return;
-   389|      const turn = game.turn();
-   390|      turnDot.className = `turn-dot ${turn === 'w' ? 'white' : 'black'}`;
-   391|      turnText.textContent = turn === 'w' ? '你的回合（白棋）' : '电脑思考中...';
-   392|      updateCaptured();
-   393|    }
-   394|
-   395|    function updateCaptured() {
-   396|      const fen = game.fen();
-   397|      const captured = { w: [], b: [] };
-   398|      const fullSet = { w: { P:0,N:0,B:0,R:0,Q:0 }, b: { P:0,N:0,B:0,R:0,Q:0 } };
-   399|      
-   400|      // Count pieces from FEN
-   401|      const rows = fen.split(' ')[0].split('/');
-   402|      rows.forEach(row => {
-   403|        let c = 0;
-   404|        for (const ch of row) {
-   405|          if (ch >= '1' && ch <= '8') { c += parseInt(ch); continue; }
-   406|          const color = ch === ch.toUpperCase() ? 'w' : 'b';
-   407|          const type = ch.toUpperCase();
-   408|          fullSet[color][type]++;
-   409|          c++;
-   410|        }
-   411|      });
-   412|
-   413|      // Starting set
-   414|      const startSet = { w: { P:8,N:2,B:2,R:2,Q:1,K:1 }, b: { P:8,N:2,B:2,R:2,Q:1,K:1 } };
-   415|      
-   416|      const order = ['Q','R','B','N','P'];
-   417|      let whiteCaptured = '', blackCaptured = '';
-   418|      order.forEach(type => {
-   419|        for (let i = fullSet.w[type]; i < startSet.w[type]; i++)
-   420|          whiteCaptured += PIECES['w' + type];
-   421|        for (let i = fullSet.b[type]; i < startSet.b[type]; i++)
-   422|          blackCaptured += PIECES['b' + type];
-   423|      });
-   424|      
-   425|      capturedDisplay.innerHTML = blackCaptured ? `<span style="color:#666">${blackCaptured}</span> ` : '';
-   426|      capturedDisplay.innerHTML += whiteCaptured ? `<span>${whiteCaptured}</span>` : '';
-   427|    }
-   428|
-   429|    function renderBoard() {
-   430|      boardEl.innerHTML = '';
-   431|      const fen = game.fen().split(' ')[0];
-   432|      const rows = fen.split('/');
-   433|      const inCheck = game.inCheck();
-   434|
-   435|      for (let r = 0; r < 8; r++) {
-   436|        let col = 0;
-   437|        for (const ch of rows[r]) {
-   438|          if (ch >= '1' && ch <= '8') {
-   439|            const empty = parseInt(ch);
-   440|            for (let e = 0; e < empty; e++) {
-   441|              const sqName = sq(r, col);
-   442|              const div = createSquare(r, col, sqName, null, inCheck);
-   443|              boardEl.appendChild(div);
-   444|              col++;
-   445|            }
-   446|          } else {
-   447|            const color = ch === ch.toUpperCase() ? 'w' : 'b';
-   448|            const type = ch.toUpperCase();
-   449|            const sqName = sq(r, col);
-   450|            const div = createSquare(r, col, sqName, color + type, inCheck);
-   451|            boardEl.appendChild(div);
-   452|            col++;
-   453|          }
-   454|        }
-   455|      }
-   456|
-   457|      // Highlight last move
-   458|      if (moveHistory.length > 0) {
-   459|        const last = moveHistory[moveHistory.length - 1];
-   460|        highlightSquare(last.from);
-   461|        highlightSquare(last.to);
-   462|      }
-   463|    }
-   464|
-   465|    function createSquare(r, c, sqName, piece, inCheck) {
-   466|      const div = document.createElement('div');
-   467|      const isDark = DARK_SQUARES.has(sqName);
-   468|      div.className = `square ${isDark ? 'dark' : 'light'}`;
-   469|      div.dataset.sq = sqName;
-   470|
-   471|      if (piece) {
-   472|        div.textContent = PIECES[piece] || '';
-   473|        div.dataset.piece = piece;
-   474|      }
-   475|
-   476|      if (inCheck && piece === (game.turn() === 'w' ? 'wK' : 'bK')) {
-   477|        div.classList.add('in-check');
-   478|      }
-   479|
-   480|      div.addEventListener('click', () => handleClick(sqName));
-   481|      return div;
-   482|    }
-   483|
-   484|    function highlightSquare(sqName) {
-   485|      const idx = (8 - parseInt(sqName[1])) * 8 + 'abcdefgh'.indexOf(sqName[0]);
-   486|      if (boardEl.children[idx]) {
-   487|        boardEl.children[idx].classList.add('last-move');
-   488|      }
-   489|    }
-   490|
-   491|    function getSquareEl(sqName) {
-   492|      const idx = (8 - parseInt(sqName[1])) * 8 + 'abcdefgh'.indexOf(sqName[0]);
-   493|      return boardEl.children[idx];
-   494|    }
-   495|
-   496|    function clearHighlights() {
-   497|      boardEl.querySelectorAll('.selected, .valid-move, .valid-capture, .last-move, .in-check').forEach(el => {
-   498|        el.classList.remove('selected', 'valid-move', 'valid-capture', 'last-move', 'in-check');
-   499|      });
-   500|    }
-   501|
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>国际象棋 - 咪咕鸟游戏</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="chess.js"></script>
+  <style>
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    .game-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2c3e50;
+      margin-bottom: 8px;
+    }
+
+    .game-subtitle {
+      color: #999;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+
+    /* Difficulty selector */
+    .difficulty {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .difficulty button {
+      padding: 6px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      color: #666;
+    }
+
+    .difficulty button:hover { border-color: #2c3e50; color: #2c3e50; }
+
+    .difficulty button.active-easy {
+      border-color: #27ae60;
+      background: #f0faf3;
+      color: #27ae60;
+      font-weight: 600;
+    }
+    .difficulty button.active-medium {
+      border-color: #e67e22;
+      background: #fef9f0;
+      color: #e67e22;
+      font-weight: 600;
+    }
+    .difficulty button.active-hard {
+      border-color: #c0392b;
+      background: #fdf6f0;
+      color: #c0392b;
+      font-weight: 600;
+    }
+
+    /* Game info bar */
+    .game-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 16px;
+      padding: 10px 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .turn-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #2c3e50;
+    }
+
+    .turn-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 2px solid #ddd;
+    }
+
+    .turn-dot.white { background: #fff; }
+    .turn-dot.black { background: #222; }
+
+    .captured-pieces {
+      font-size: 18px;
+      min-height: 24px;
+      letter-spacing: 1px;
+    }
+
+    /* Board */
+    .board-wrapper {
+      background: white;
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 0;
+      width: 480px;
+      height: 480px;
+      border: 2px solid #2c3e50;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .square {
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      transition: background 0.15s;
+    }
+
+    .square.light { background: #f0d9b5; }
+    .square.dark { background: #b58863; }
+
+    .square.selected {
+      background: #f6f669 !important;
+    }
+
+    .square.valid-move::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.2);
+    }
+
+    .square.valid-capture {
+      box-shadow: inset 0 0 0 4px rgba(0,0,0,0.3);
+    }
+
+    .square.last-move {
+      background: #cdd26a !important;
+    }
+
+    .square.in-check {
+      background: radial-gradient(ellipse at center, #ff0000 0%, #e70000 25%, rgba(169,0,0,0) 89%) !important;
+    }
+
+    /* Status */
+    .game-status {
+      margin-top: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      min-height: 24px;
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    .game-status.win { color: #27ae60; }
+    .game-status.lose { color: #c0392b; }
+    .game-status.draw { color: #e67e22; }
+
+    /* Buttons */
+    .game-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      padding: 8px 20px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      border-color: #2c3e50;
+      color: #2c3e50;
+    }
+
+    .btn-primary {
+      background: #2c3e50;
+      color: white;
+      border-color: #2c3e50;
+    }
+
+    .btn-primary:hover {
+      background: #c0392b;
+      border-color: #c0392b;
+    }
+
+    /* Thinking indicator */
+    .thinking {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .thinking .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ddd;
+      border-top-color: #2c3e50;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 20px;
+      color: #999;
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: #2c3e50; }
+
+    /* Responsive */
+    @media (max-width: 540px) {
+      .board { width: 92vw; height: 92vw; }
+      .square { width: 11.5vw; height: 11.5vw; font-size: 7vw; }
+      .board-wrapper { padding: 8px; }
+      .game-title { font-size: 22px; }
+      .game-info { max-width: 92vw; padding: 8px 12px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="nav-brand">咪咕鸟游戏</a>
+  </nav>
+
+  <main>
+    <div class="game-container">
+      <h1 class="game-title">♚ 国际象棋</h1>
+      <p class="game-subtitle">人机对战 · 点击棋子再点击目标格移动</p>
+
+      <div class="difficulty">
+        <button class="active-easy" data-level="easy">初级</button>
+        <button data-level="medium">中级</button>
+        <button data-level="hard">高级</button>
+      </div>
+
+      <div class="game-info">
+        <div class="turn-indicator">
+          <span class="turn-dot white" id="turnDot"></span>
+          <span id="turnText">你的回合</span>
+        </div>
+        <div class="captured-pieces" id="capturedDisplay"></div>
+      </div>
+
+      <div class="board-wrapper">
+        <div class="board" id="board"></div>
+      </div>
+
+      <div class="game-status" id="gameStatus"></div>
+      <div class="thinking" id="thinkingIndicator">
+        <div class="spinner"></div>
+        <span>电脑思考中...</span>
+      </div>
+
+      <div class="game-actions">
+        <button class="btn btn-primary" id="restartBtn">↻ 新一局</button>
+        <button class="btn" id="undoBtn">↩ 悔棋</button>
+      </div>
+
+      <a href="/" class="back-link">← 返回游戏列表</a>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 咪咕鸟游戏 · 原创网页游戏</p>
+  </footer>
+
+  <script>
+    // DIAGNOSTIC: Check if chess loaded
+    var diag = document.createElement('div');
+    diag.id = 'diag';
+    diag.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff0;color:#000;padding:8px;z-index:9999;font-size:14px;text-align:center';
+    document.body.appendChild(diag);
+    
+    function diagMsg(msg) {
+      var d = document.getElementById('diag');
+      if (d) d.textContent = msg;
+    }
+    
+    diagMsg('Chess loaded: ' + (typeof Chess !== 'undefined'));
+    
+    try {
+      var testGame = new Chess();
+      diagMsg('Chess OK, new Chess() works');
+    } catch(e) {
+      diagMsg('ERROR: ' + e.message);
+    }
+  </script>
+  <script>
+    const PIECES = { 'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
+                     'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟' };
+
+    const DIFFICULTY = { easy: 2, medium: 3, hard: 3 };
+
+    let game = new Chess();
+    let currentLevel = 'easy';
+    let selectedSquare = null;
+    let gameOver = false;
+    let isAIThinking = false;
+    let moveHistory = []; // for undo
+    
+    // Color squares: light/dark pattern - standard chess board
+    // a8 is dark (index 0), h8 is light (index 7)
+    const DARK_SQUARES = new Set();
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if ((r + c) % 2 === 1) DARK_SQUARES.add(sq(r, c));
+      }
+    }
+
+    function sq(r, c) { return 'abcdefgh'[c] + (8 - r); }
+
+    const boardEl = document.getElementById('board');
+    const gameStatus = document.getElementById('gameStatus');
+    const turnText = document.getElementById('turnText');
+    const turnDot = document.getElementById('turnDot');
+    const capturedDisplay = document.getElementById('capturedDisplay');
+    const thinkingIndicator = document.getElementById('thinkingIndicator');
+    const diffBtns = document.querySelectorAll('.difficulty button');
+
+    diffBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        diffBtns.forEach(b => { b.className = ''; });
+        currentLevel = btn.dataset.level;
+        btn.className = `active-${currentLevel}`;
+        initGame();
+      });
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', initGame);
+    document.getElementById('undoBtn').addEventListener('click', undoMove);
+
+    function initGame() {
+      game = new Chess();
+      selectedSquare = null;
+      gameOver = false;
+      isAIThinking = false;
+      moveHistory = [];
+      gameStatus.textContent = '';
+      gameStatus.className = 'game-status';
+      thinkingIndicator.style.display = 'none';
+      renderBoard();
+      updateInfo();
+    }
+
+    function updateInfo() {
+      if (gameOver) return;
+      const turn = game.turn();
+      turnDot.className = `turn-dot ${turn === 'w' ? 'white' : 'black'}`;
+      turnText.textContent = turn === 'w' ? '你的回合（白棋）' : '电脑思考中...';
+      updateCaptured();
+    }
+
+    function updateCaptured() {
+      const fen = game.fen();
+      const captured = { w: [], b: [] };
+      const fullSet = { w: { P:0,N:0,B:0,R:0,Q:0 }, b: { P:0,N:0,B:0,R:0,Q:0 } };
+      
+      // Count pieces from FEN
+      const rows = fen.split(' ')[0].split('/');
+      rows.forEach(row => {
+        let c = 0;
+        for (const ch of row) {
+          if (ch >= '1' && ch <= '8') { c += parseInt(ch); continue; }
+          const color = ch === ch.toUpperCase() ? 'w' : 'b';
+          const type = ch.toUpperCase();
+          fullSet[color][type]++;
+          c++;
+        }
+      });
+
+      // Starting set
+      const startSet = { w: { P:8,N:2,B:2,R:2,Q:1,K:1 }, b: { P:8,N:2,B:2,R:2,Q:1,K:1 } };
+      
+      const order = ['Q','R','B','N','P'];
+      let whiteCaptured = '', blackCaptured = '';
+      order.forEach(type => {
+        for (let i = fullSet.w[type]; i < startSet.w[type]; i++)
+          whiteCaptured += PIECES['w' + type];
+        for (let i = fullSet.b[type]; i < startSet.b[type]; i++)
+          blackCaptured += PIECES['b' + type];
+      });
+      
+      capturedDisplay.innerHTML = blackCaptured ? `<span style="color:#666">${blackCaptured}</span> ` : '';
+      capturedDisplay.innerHTML += whiteCaptured ? `<span>${whiteCaptured}</span>` : '';
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      const fen = game.fen().split(' ')[0];
+      const rows = fen.split('/');
+      const inCheck = game.inCheck();
+
+      for (let r = 0; r < 8; r++) {
+        let col = 0;
+        for (const ch of rows[r]) {
+          if (ch >= '1' && ch <= '8') {
+            const empty = parseInt(ch);
+            for (let e = 0; e < empty; e++) {
+              const sqName = sq(r, col);
+              const div = createSquare(r, col, sqName, null, inCheck);
+              boardEl.appendChild(div);
+              col++;
+            }
+          } else {
+            const color = ch === ch.toUpperCase() ? 'w' : 'b';
+            const type = ch.toUpperCase();
+            const sqName = sq(r, col);
+            const div = createSquare(r, col, sqName, color + type, inCheck);
+            boardEl.appendChild(div);
+            col++;
+          }
+        }
+      }
+
+      // Highlight last move
+      if (moveHistory.length > 0) {
+        const last = moveHistory[moveHistory.length - 1];
+        highlightSquare(last.from);
+        highlightSquare(last.to);
+      }
+    }
+
+    function createSquare(r, c, sqName, piece, inCheck) {
+      const div = document.createElement('div');
+      const isDark = DARK_SQUARES.has(sqName);
+      div.className = `square ${isDark ? 'dark' : 'light'}`;
+      div.dataset.sq = sqName;
+
+      if (piece) {
+        div.textContent = PIECES[piece] || '';
+        div.dataset.piece = piece;
+      }
+
+      if (inCheck && piece === (game.turn() === 'w' ? 'wK' : 'bK')) {
+        div.classList.add('in-check');
+      }
+
+      div.addEventListener('click', () => handleClick(sqName));
+      return div;
+    }
+
+    function highlightSquare(sqName) {
+      const idx = (8 - parseInt(sqName[1])) * 8 + 'abcdefgh'.indexOf(sqName[0]);
+      if (boardEl.children[idx]) {
+        boardEl.children[idx].classList.add('last-move');
+      }
+    }
+
+    function getSquareEl(sqName) {
+      const idx = (8 - parseInt(sqName[1])) * 8 + 'abcdefgh'.indexOf(sqName[0]);
+      return boardEl.children[idx];
+    }
+
+    function clearHighlights() {
+      boardEl.querySelectorAll('.selected, .valid-move, .valid-capture, .last-move, .in-check').forEach(el => {
+        el.classList.remove('selected', 'valid-move', 'valid-capture', 'last-move', 'in-check');
+      });
+    }
+
+    function showValidMoves(sqName) {
+      const moves = game.moves({ square: sqName, verbose: true });
+      moves.forEach(move => {
+        const el = getSquareEl(move.to);
+        if (el) {
+          if (move.captured) el.classList.add('valid-capture');
+          else el.classList.add('valid-move');
+        }
+      });
+    }
+
+    function handleClick(sqName) {
+      diagMsg('click: ' + sqName + ' turn=' + game.turn() + ' AI=' + isAIThinking + ' over=' + gameOver);
+      if (gameOver || isAIThinking) return;
+      if (game.turn() === 'b') { diagMsg('not your turn'); return; }
+
+      // If a piece is already selected
+      if (selectedSquare) {
+        // Clicking same square - deselect
+        if (selectedSquare === sqName) {
+          clearHighlights();
+          selectedSquare = null;
+          return;
+        }
+
+        // Try to make a move
+        const move = game.move({
+          from: selectedSquare,
+          to: sqName,
+          promotion: 'q' // Always promote to queen
+        });
+
+        if (move) {
+          diagMsg('move OK, turn=' + game.turn() + ', calling aiMove...');
+          try {
+            clearHighlights();
+            selectedSquare = null;
+            moveHistory.push(move);
+            diagMsg('about to renderBoard...');
+            renderBoard();
+            diagMsg('renderBoard done, calling checkGameState...');
+            checkGameState();
+            diagMsg('gameOver=' + gameOver + ', about to call aiMove()');
+            if (!gameOver) {
+              diagMsg('calling aiMove now...');
+              aiMove();
+              diagMsg('aiMove returned');
+            } else {
+              diagMsg('gameOver is true, skipping aiMove');
+            }
+          } catch(e) {
+            diagMsg('ERROR in move handler: ' + e.message + ' | ' + e.stack);
+            console.error('ERROR:', e);
+          }
+          return;
+        }
+
+        // Not a valid move - try selecting a different piece
+        const piece = game.get(sqName);
+        if (piece && piece.color === 'w') {
+          clearHighlights();
+          selectedSquare = sqName;
+          const el = getSquareEl(sqName);
+          if (el) el.classList.add('selected');
+          showValidMoves(sqName);
+          return;
+        }
+
+        // Invalid target, deselect
+        clearHighlights();
+        selectedSquare = null;
+        return;
+      }
+
+      // No piece selected - try to select one
+      const piece = game.get(sqName);
+      if (piece && piece.color === 'w') {
+        clearHighlights();
+        selectedSquare = sqName;
+        const el = getSquareEl(sqName);
+        if (el) el.classList.add('selected');
+        showValidMoves(sqName);
+      }
+    }
+
+    // ========== AI Engine ==========
+
+    const PIECE_VALUES = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+    // Piece-square tables for positional evaluation
+    const PST = {
+      p: [ 0,  0,  0,  0,  0,  0,  0,  0,
+          50, 50, 50, 50, 50, 50, 50, 50,
+          10, 10, 20, 30, 30, 20, 10, 10,
+           5,  5, 10, 25, 25, 10,  5,  5,
+           0,  0,  0, 20, 20,  0,  0,  0,
+           5, -5,-10,  0,  0,-10, -5,  5,
+           5, 10, 10,-20,-20, 10, 10,  5,
+           0,  0,  0,  0,  0,  0,  0,  0 ],
+      n: [-50,-40,-30,-30,-30,-30,-40,-50,
+          -40,-20,  0,  0,  0,  0,-20,-40,
+          -30,  0, 10, 15, 15, 10,  0,-30,
+          -30,  5, 15, 20, 20, 15,  5,-30,
+          -30,  0, 15, 20, 20, 15,  0,-30,
+          -30,  5, 10, 15, 15, 10,  5,-30,
+          -40,-20,  0,  5,  5,  0,-20,-40,
+          -50,-40,-30,-30,-30,-30,-40,-50 ],
+      b: [-20,-10,-10,-10,-10,-10,-10,-20,
+          -10,  0,  0,  0,  0,  0,  0,-10,
+          -10,  0,  5, 10, 10,  5,  0,-10,
+          -10,  5,  5, 10, 10,  5,  5,-10,
+          -10,  0, 10, 10, 10, 10,  0,-10,
+          -10, 10, 10, 10, 10, 10, 10,-10,
+          -10,  5,  0,  0,  0,  0,  5,-10,
+          -20,-10,-10,-10,-10,-10,-10,-20 ],
+      r: [ 0,  0,  0,  0,  0,  0,  0,  0,
+           5, 10, 10, 10, 10, 10, 10,  5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+          -5,  0,  0,  0,  0,  0,  0, -5,
+           0,  0,  0,  5,  5,  0,  0,  0 ],
+      q: [-20,-10,-10, -5, -5,-10,-10,-20,
+          -10,  0,  0,  0,  0,  0,  0,-10,
+          -10,  0,  5,  5,  5,  5,  0,-10,
+           -5,  0,  5,  5,  5,  5,  0, -5,
+            0,  0,  5,  5,  5,  5,  0, -5,
+          -10,  5,  5,  5,  5,  5,  0,-10,
+          -10,  0,  5,  0,  0,  0,  0,-10,
+          -20,-10,-10, -5, -5,-10,-10,-20 ],
+      k: [-30,-40,-40,-50,-50,-40,-40,-30,
+          -30,-40,-40,-50,-50,-40,-40,-30,
+          -30,-40,-40,-50,-50,-40,-40,-30,
+          -30,-40,-40,-50,-50,-40,-40,-30,
+          -20,-30,-30,-40,-40,-30,-30,-20,
+          -10,-20,-20,-20,-20,-20,-20,-10,
+           20, 20,  0,  0,  0,  0, 20, 20,
+           20, 30, 10,  0,  0, 10, 30, 20 ]
+    };
+
+    function pstIndex(sq, color) {
+      const file = 'abcdefgh'.indexOf(sq[0]);
+      const rank = parseInt(sq[1]) - 1;
+      return color === 'w' ? (7 - rank) * 8 + file : rank * 8 + (7 - file);
+    }
+
+    function evaluate() {
+      let score = 0;
+      const fen = game.fen().split(' ')[0];
+      const rows = fen.split('/');
+
+      for (let r = 0; r < 8; r++) {
+        let col = 0;
+        for (const ch of rows[r]) {
+          if (ch >= '1' && ch <= '8') { col += parseInt(ch); continue; }
+          const color = ch === ch.toUpperCase() ? 'w' : 'b';
+          const type = ch.toLowerCase();
+          const sqName = sq(r, col);
+          const table = PST[type];
+          const pstVal = table ? (table[pstIndex(sqName, color)] || 0) : 0;
+          const val = (PIECE_VALUES[type] || 0) + pstVal;
+          score += (color === 'w' ? val : -val);
+          col++;
+        }
+      }
+
+      return isNaN(score) ? 0 : score;
+    }
+
+    function minimax(depth, alpha, beta, isMaximizing) {
+      if (depth === 0) return { score: evaluate(), move: null };
+
+      const moves = game.moves();
+      if (moves.length === 0) {
+        if (game.inCheck()) return { score: isMaximizing ? -99999 + (3-depth)*100 : 99999 - (3-depth)*100, move: null };
+        return { score: 0, move: null };
+      }
+
+      let bestMove = moves[0];
+      let nodeCount = 0;
+
+      for (const m of moves) {
+        let success = false;
+        try {
+          const result = game.move(m);
+          success = !!result;
+        } catch(e) {
+          success = false;
+        }
+        if (!success) continue; // skip invalid moves
+        nodeCount++;
+
+        const val = minimax(depth - 1, alpha, beta, !isMaximizing);
+        game.undo();
+
+        // Handle NaN scores
+        const s = isNaN(val.score) ? 0 : val.score;
+
+        if (isMaximizing) {
+          if (s > alpha) {
+            alpha = s;
+            bestMove = m;
+          }
+        } else {
+          if (s < beta) {
+            beta = s;
+            bestMove = m;
+          }
+        }
+
+        if (alpha >= beta) break;
+
+        // Safety: limit nodes searched to prevent freeze
+        if (nodeCount > 20000) break;
+      }
+
+      return { score: isMaximizing ? alpha : beta, move: bestMove };
+    }
+
+    function aiMove() {
+      diagMsg('ENTERED aiMove(), turn=' + game.turn() + ' gameOver=' + gameOver);
+      if (gameOver) { diagMsg('aiMove: gameOver=true, exiting'); return; }
+      if (game.turn() !== 'b') { diagMsg('aiMove: turn=' + game.turn() + ' not black, exiting'); return; }
+      diagMsg('aiMove: proceeding...');
+      isAIThinking = true;
+      thinkingIndicator.style.display = 'flex';
+      turnText.textContent = '电脑思考中...';
+      diagMsg('AI thinking started...');
+
+      setTimeout(() => {
+        try {
+          const depth = DIFFICULTY[currentLevel];
+          diagMsg('AI searching depth=' + depth);
+          const startTime = performance.now();
+          const result = minimax(depth, -Infinity, Infinity, false);
+          const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+          diagMsg('AI done in ' + elapsed + 's, move=' + (result.move || 'none'));
+          console.log('AI search done in ' + elapsed + 's, best move:', result.move);
+          
+          if (result.move) {
+            const moveObj = game.move(result.move);
+            diagMsg('AI execute move: ' + (moveObj ? moveObj.san : 'FAILED'));
+            console.log('AI move result:', moveObj ? 'ok' : 'FAILED');
+            if (moveObj) {
+              moveHistory.push({ from: moveObj.from, to: moveObj.to });
+            }
+          } else {
+            diagMsg('AI found no move!');
+          }
+
+          isAIThinking = false;
+          thinkingIndicator.style.display = 'none';
+          renderBoard();
+          checkGameState();
+        } catch (e) {
+          diagMsg('AI ERROR: ' + e.message);
+          console.error('AI error:', e.message, e.stack);
+          isAIThinking = false;
+          thinkingIndicator.style.display = 'none';
+          gameStatus.textContent = '⚠️ AI 出错，请重新开始';
+          gameStatus.className = 'game-status draw';
+        }
+      }, 50);
+    }
+
+    function checkGameState() {
+      updateInfo();
+
+      if (game.isCheckmate()) {
+        gameOver = true;
+        const winner = game.turn() === 'w' ? '黑方' : '白方';
+        gameStatus.textContent = `🏆 ${winner}获胜！${winner === '黑方' ? '电脑赢了' : '你赢了！'}`;
+        gameStatus.className = `game-status ${game.turn() === 'w' ? 'lose' : 'win'}`;
+        turnText.textContent = '对局结束';
+        return;
+      }
+
+      if (game.isDraw()) {
+        gameOver = true;
+        gameStatus.textContent = '🤝 平局';
+        gameStatus.className = 'game-status draw';
+        turnText.textContent = '对局结束';
+        return;
+      }
+
+      if (game.isCheck()) {
+        gameStatus.textContent = '⚠️ 将军！';
+      } else {
+        gameStatus.textContent = '';
+      }
+    }
+
+    function undoMove() {
+      if (isAIThinking || moveHistory.length === 0) return;
+      // Undo two moves (AI + player)
+      if (moveHistory.length >= 2) {
+        game.undo();
+        game.undo();
+        moveHistory.pop();
+        moveHistory.pop();
+      } else {
+        game.undo();
+        moveHistory.pop();
+      }
+      gameOver = false;
+      selectedSquare = null;
+      renderBoard();
+      updateInfo();
+      gameStatus.textContent = '';
+      gameStatus.className = 'game-status';
+    }
+
+    initGame();
+  </script>
+</body>
+</html>
