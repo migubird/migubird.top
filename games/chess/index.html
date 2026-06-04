@@ -768,7 +768,7 @@
     function checkGameState() {
       updateInfo();
 
-      if (game.inCheckmate()) {
+      if (game.isCheckmate()) {
         gameOver = true;
         const winner = game.turn() === 'w' ? '黑方' : '白方';
         gameStatus.textContent = `🏆 ${winner}获胜！${winner === '黑方' ? '电脑赢了' : '你赢了！'}`;
