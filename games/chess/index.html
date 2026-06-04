@@ -307,6 +307,27 @@
   </footer>
 
   <script>
+    // DIAGNOSTIC: Check if chess loaded
+    var diag = document.createElement('div');
+    diag.id = 'diag';
+    diag.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff0;color:#000;padding:8px;z-index:9999;font-size:14px;text-align:center';
+    document.body.appendChild(diag);
+    
+    function diagMsg(msg) {
+      var d = document.getElementById('diag');
+      if (d) d.textContent = msg;
+    }
+    
+    diagMsg('Chess loaded: ' + (typeof Chess !== 'undefined'));
+    
+    try {
+      var testGame = new Chess();
+      diagMsg('Chess OK, new Chess() works');
+    } catch(e) {
+      diagMsg('ERROR: ' + e.message);
+    }
+  </script>
+  <script>
     const PIECES = { 'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
                      'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟' };
 
@@ -490,8 +511,9 @@
     }
 
     function handleClick(sqName) {
+      diagMsg('click: ' + sqName + ' turn=' + game.turn() + ' AI=' + isAIThinking + ' over=' + gameOver);
       if (gameOver || isAIThinking) return;
-      if (game.turn() === 'b') return; // AI's turn
+      if (game.turn() === 'b') { diagMsg('not your turn'); return; }
 
       // If a piece is already selected
       if (selectedSquare) {
@@ -510,6 +532,7 @@
         });
 
         if (move) {
+          diagMsg('move OK, turn=' + game.turn());
           clearHighlights();
           selectedSquare = null;
           moveHistory.push(move);
@@ -685,26 +708,30 @@
     function aiMove() {
       if (gameOver) return;
       if (game.turn() !== 'b') { console.log('aiMove: not black turn'); return; }
-
       isAIThinking = true;
       thinkingIndicator.style.display = 'flex';
       turnText.textContent = '电脑思考中...';
+      diagMsg('AI thinking started...');
 
       setTimeout(() => {
         try {
           const depth = DIFFICULTY[currentLevel];
-          console.log('AI starting search depth=' + depth);
+          diagMsg('AI searching depth=' + depth);
           const startTime = performance.now();
           const result = minimax(depth, -Infinity, Infinity, false);
           const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+          diagMsg('AI done in ' + elapsed + 's, move=' + (result.move || 'none'));
           console.log('AI search done in ' + elapsed + 's, best move:', result.move);
           
           if (result.move) {
             const moveObj = game.move(result.move);
+            diagMsg('AI execute move: ' + (moveObj ? moveObj.san : 'FAILED'));
             console.log('AI move result:', moveObj ? 'ok' : 'FAILED');
             if (moveObj) {
               moveHistory.push({ from: moveObj.from, to: moveObj.to });
             }
+          } else {
+            diagMsg('AI found no move!');
           }
 
           isAIThinking = false;
@@ -712,6 +739,7 @@
           renderBoard();
           checkGameState();
         } catch (e) {
+          diagMsg('AI ERROR: ' + e.message);
           console.error('AI error:', e.message, e.stack);
           isAIThinking = false;
           thinkingIndicator.style.display = 'none';
